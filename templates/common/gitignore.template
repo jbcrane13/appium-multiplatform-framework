@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+*.log
+
+# Reports
+reports/*.html
+reports/ios/*.html
+reports/android/*.html
+reports/allure/*
+screenshots/ios/*.png
+screenshots/android/*.png
+logs/*.log
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# App bundles (large files)
+*.app
+*.ipa
+*.apk
+*.aab
+
+# Temporary files
+*.tmp
+*.temp

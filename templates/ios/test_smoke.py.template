@@ -1,0 +1,77 @@
+"""Smoke tests for {{app_name}} iOS app."""
+
+import pytest
+from pages.ios.home_page import HomePage
+
+
+@pytest.mark.ios
+@pytest.mark.smoke
+class TestiOSSmoke:
+    """Critical path smoke tests for iOS."""
+
+    def test_app_launches(self, driver):
+        """
+        Test that app launches successfully.
+
+        GIVEN the {{app_name}} app is installed
+        WHEN the app is launched
+        THEN the app should start without crashing
+        """
+        # Verify app has loaded
+        page_source = driver.page_source
+        assert page_source is not None, "App did not load - no page source"
+        assert len(page_source) > 0, "App did not load - empty page source"
+
+        print("✓ App launched successfully")
+
+    def test_home_screen_displays(self, driver):
+        """
+        Test that home screen displays.
+
+        GIVEN the app has launched
+        WHEN on the home screen
+        THEN home screen elements should be visible
+        """
+        home_page = HomePage(driver)
+
+        # Verify home screen is displayed
+        assert home_page.is_displayed(), "Home screen is not displayed"
+
+        print("✓ Home screen displayed successfully")
+
+    def test_app_handles_background(self, driver):
+        """
+        Test that app resumes from background.
+
+        GIVEN the app is running
+        WHEN app is sent to background and resumed
+        THEN the app should resume without crashing
+        """
+        home_page = HomePage(driver)
+
+        # Verify home screen before backgrounding
+        assert home_page.is_displayed(), "Home screen not displayed before background test"
+
+        # Send app to background for 3 seconds
+        driver.background_app(3)
+
+        # Verify app resumed
+        assert home_page.is_displayed(timeout=10), "App did not resume correctly from background"
+
+        print("✓ App resumed from background successfully")
+
+    @pytest.mark.skip(reason="Update with actual navigation when UI is implemented")
+    def test_basic_navigation(self, driver):
+        """
+        Test basic navigation flow.
+
+        TODO: Update this test with your app's actual navigation
+        This is a placeholder - customize for your app's structure
+        """
+        home_page = HomePage(driver)
+
+        # Example: Navigate to another screen
+        # home_page.tap_button()
+        # assert NextScreen(driver).is_displayed()
+
+        print("Navigation test - TODO: implement based on app structure")

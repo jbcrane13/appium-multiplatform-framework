@@ -1,0 +1,10 @@
+{
+  "app_name": "{{app_name}}",
+  "appium_url": "http://127.0.0.1:4723",
+  "implicit_wait": 10,
+  "explicit_wait": 30,
+  "command_timeout": 60,
+  "screenshot_on_failure": true,
+  "log_level": "INFO",
+  "capabilities": {}
+}

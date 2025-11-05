@@ -1,0 +1,15 @@
+{
+  "platformName": "iOS",
+  "appium:platformVersion": "{{ios_version}}",
+  "appium:deviceName": "{{device_name}}",
+  "appium:automationName": "XCUITest",
+  "appium:app": "{{app_path}}",
+  "appium:bundleId": "{{bundle_id}}",
+  "appium:newCommandTimeout": 60,
+  "appium:showIOSLog": false,
+  "appium:usePrebuiltWDA": true,
+  "appium:useNewWDA": false,
+  "appium:clearSystemFiles": false,
+  "appium:noReset": false,
+  "appium:fullReset": false
+}

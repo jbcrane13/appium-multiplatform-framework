@@ -1,0 +1,165 @@
+name: Multi-Platform Mobile Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+
+jobs:
+  ios-tests:
+    name: iOS Automation Tests
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    strategy:
+      matrix:
+        device: [iPhone_15, iPhone_15_Pro]
+
+    steps:
+      - name: Checkout automation project
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install Appium
+        run: |
+          npm install -g appium
+          appium driver install xcuitest
+
+      - name: List iOS simulators
+        run: |
+          xcrun simctl list devices available
+
+      - name: Start Appium
+        run: |
+          appium &
+          sleep 10
+          curl http://127.0.0.1:4723/status
+
+      - name: Run iOS smoke tests
+        run: |
+          pytest tests/ios/ \
+            -v \
+            -m smoke \
+            --html=reports/ios/report.html \
+            --self-contained-html
+
+      - name: Upload iOS test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-report-${{ matrix.device }}
+          path: reports/ios/
+
+      - name: Upload iOS screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-failure-screenshots-${{ matrix.device }}
+          path: screenshots/ios/
+
+  android-tests:
+    name: Android Automation Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # TODO: Enable when Android support is implemented
+    if: false
+
+    strategy:
+      matrix:
+        api-level: [30, 33]
+
+    steps:
+      - name: Checkout automation project
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install Appium
+        run: |
+          npm install -g appium
+          appium driver install uiautomator2
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Start Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          script: echo "Emulator started"
+
+      - name: Start Appium
+        run: |
+          appium &
+          sleep 10
+
+      - name: Run Android smoke tests
+        run: |
+          pytest tests/android/ \
+            -v \
+            -m smoke \
+            --html=reports/android/report.html
+
+      - name: Upload Android test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-report-api${{ matrix.api-level }}
+          path: reports/android/
+
+  cross-platform-tests:
+    name: Cross-Platform Tests
+    needs: [ios-tests]  # TODO: Add android-tests when available
+    runs-on: macos-latest
+
+    # TODO: Enable when cross-platform tests exist
+    if: false
+
+    steps:
+      - name: Checkout automation project
+        uses: actions/checkout@v4
+
+      - name: Run cross-platform tests
+        run: |
+          pytest tests/cross_platform/ -v
+
+  test-summary:
+    name: Test Summary
+    needs: [ios-tests]  # TODO: Add android-tests when available
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create test summary
+        run: |
+          echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**iOS Tests:** ${{ needs.ios-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          # TODO: Add Android when available
+          # echo "**Android Tests:** ${{ needs.android-tests.result }}" >> $GITHUB_STEP_SUMMARY

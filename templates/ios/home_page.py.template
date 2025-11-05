@@ -1,0 +1,73 @@
+"""Home page object for {{app_name}}."""
+
+from typing import Tuple
+from pages.base_page import BasePage
+
+
+class HomePage(BasePage):
+    """Page object for {{app_name}} home screen."""
+
+    # ===== Locators =====
+    # TODO: Update these locators based on your actual app elements
+    # Use Appium Inspector to find the correct accessibility IDs
+
+    @property
+    def app_title_locator(self) -> Tuple[str, str]:
+        """Locator for app title/header."""
+        return self.by_accessibility_id("app_title")
+
+    @property
+    def main_content_locator(self) -> Tuple[str, str]:
+        """Locator for main content area."""
+        return self.by_class_name("XCUIElementTypeScrollView")
+
+    @property
+    def navigation_bar_locator(self) -> Tuple[str, str]:
+        """Locator for navigation bar."""
+        return self.by_class_name("XCUIElementTypeNavigationBar")
+
+    # ===== Page Verifications =====
+
+    def is_displayed(self, timeout: int = 10) -> bool:
+        """
+        Check if home page is displayed.
+
+        Args:
+            timeout: Wait timeout
+
+        Returns:
+            True if home page visible
+        """
+        return (
+            self.is_element_visible(self.navigation_bar_locator, timeout=timeout) or
+            self.is_element_visible(self.main_content_locator, timeout=timeout)
+        )
+
+    # ===== Page Actions =====
+
+    def get_title(self) -> str:
+        """
+        Get page title.
+
+        Returns:
+            Page title text
+        """
+        return self.get_text(self.app_title_locator)
+
+    def scroll_down(self, distance: int = 300) -> None:
+        """
+        Scroll down the content.
+
+        Args:
+            distance: Scroll distance in pixels
+        """
+        self.swipe('up', distance)
+
+    def scroll_up(self, distance: int = 300) -> None:
+        """
+        Scroll up the content.
+
+        Args:
+            distance: Scroll distance in pixels
+        """
+        self.swipe('down', distance)

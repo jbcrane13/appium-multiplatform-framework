@@ -1,0 +1,12 @@
+# Appium Multi-Platform Framework Requirements
+# These are for the framework itself (deployment scripts)
+
+# Deployment utilities
+click==8.1.7
+colorama==0.4.6
+
+# Templating
+jinja2==3.1.4
+
+# For validation
+packaging==24.0

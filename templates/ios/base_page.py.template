@@ -1,0 +1,280 @@
+"""Base page object class for all platforms."""
+
+from typing import Tuple, Optional, List
+from appium.webdriver.webdriver import WebDriver
+from appium.webdriver.webelement import WebElement
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+
+
+class BasePage:
+    """
+    Platform-agnostic base page object.
+
+    This class provides common functionality that works across iOS and Android.
+    Platform-specific behavior is handled via the platform property.
+    """
+
+    def __init__(self, driver: WebDriver):
+        """
+        Initialize base page.
+
+        Args:
+            driver: Appium WebDriver instance
+        """
+        self.driver = driver
+        self.platform = driver.capabilities.get('platformName', 'unknown').lower()
+        self.default_timeout = 30
+
+    # ===== Locator Helpers =====
+
+    def by_accessibility_id(self, accessibility_id: str) -> Tuple[str, str]:
+        """
+        Create locator by accessibility ID (works on iOS and Android).
+
+        Args:
+            accessibility_id: Accessibility identifier
+
+        Returns:
+            Tuple of (By.ACCESSIBILITY_ID, value)
+        """
+        return (By.ACCESSIBILITY_ID, accessibility_id)
+
+    def by_id(self, element_id: str) -> Tuple[str, str]:
+        """
+        Create locator by ID.
+
+        Args:
+            element_id: Element ID
+
+        Returns:
+            Tuple of (By.ID, value)
+        """
+        return (By.ID, element_id)
+
+    def by_xpath(self, xpath: str) -> Tuple[str, str]:
+        """
+        Create locator by XPath.
+
+        Args:
+            xpath: XPath expression
+
+        Returns:
+            Tuple of (By.XPATH, value)
+        """
+        return (By.XPATH, xpath)
+
+    def by_class_name(self, class_name: str) -> Tuple[str, str]:
+        """
+        Create locator by class name.
+
+        Args:
+            class_name: Class name
+
+        Returns:
+            Tuple of (By.CLASS_NAME, value)
+        """
+        return (By.CLASS_NAME, class_name)
+
+    # iOS-specific locators
+    def by_ios_predicate(self, predicate: str) -> Tuple[str, str]:
+        """
+        Create locator by iOS predicate string (iOS only).
+
+        Args:
+            predicate: iOS predicate expression
+
+        Returns:
+            Tuple of (By.IOS_PREDICATE, value)
+        """
+        if self.platform != 'ios':
+            raise ValueError("iOS predicates only work on iOS platform")
+        return ('-ios predicate string', predicate)
+
+    def by_ios_class_chain(self, class_chain: str) -> Tuple[str, str]:
+        """
+        Create locator by iOS class chain (iOS only).
+
+        Args:
+            class_chain: iOS class chain expression
+
+        Returns:
+            Tuple of (By.IOS_CLASS_CHAIN, value)
+        """
+        if self.platform != 'ios':
+            raise ValueError("iOS class chains only work on iOS platform")
+        return ('-ios class chain', class_chain)
+
+    # Android-specific locators (for future use)
+    def by_android_uiautomator(self, uia_string: str) -> Tuple[str, str]:
+        """
+        Create locator by Android UIAutomator (Android only).
+
+        Args:
+            uia_string: UIAutomator string
+
+        Returns:
+            Tuple of (By.ANDROID_UIAUTOMATOR, value)
+        """
+        if self.platform != 'android':
+            raise ValueError("UIAutomator only works on Android platform")
+        return ('-android uiautomator', uia_string)
+
+    # ===== Element Finding =====
+
+    def find_element(self, locator: Tuple[str, str], timeout: Optional[int] = None) -> WebElement:
+        """
+        Find element with wait.
+
+        Args:
+            locator: Tuple of (By strategy, value)
+            timeout: Custom timeout
+
+        Returns:
+            WebElement when found
+        """
+        timeout = timeout or self.default_timeout
+        return WebDriverWait(self.driver, timeout).until(
+            EC.presence_of_element_located(locator)
+        )
+
+    def find_elements(self, locator: Tuple[str, str], timeout: Optional[int] = None) -> List[WebElement]:
+        """
+        Find multiple elements with wait.
+
+        Args:
+            locator: Tuple of (By strategy, value)
+            timeout: Custom timeout
+
+        Returns:
+            List of WebElements
+        """
+        timeout = timeout or self.default_timeout
+        return WebDriverWait(self.driver, timeout).until(
+            EC.presence_of_all_elements_located(locator)
+        )
+
+    def is_element_present(self, locator: Tuple[str, str], timeout: int = 5) -> bool:
+        """
+        Check if element is present.
+
+        Args:
+            locator: Tuple of (By strategy, value)
+            timeout: Wait timeout
+
+        Returns:
+            True if present
+        """
+        try:
+            self.find_element(locator, timeout=timeout)
+            return True
+        except TimeoutException:
+            return False
+
+    def is_element_visible(self, locator: Tuple[str, str], timeout: int = 5) -> bool:
+        """
+        Check if element is visible.
+
+        Args:
+            locator: Tuple of (By strategy, value)
+            timeout: Wait timeout
+
+        Returns:
+            True if visible
+        """
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                EC.visibility_of_element_located(locator)
+            )
+            return True
+        except TimeoutException:
+            return False
+
+    # ===== Element Interactions =====
+
+    def click(self, locator: Tuple[str, str], timeout: Optional[int] = None) -> None:
+        """
+        Click element with wait.
+
+        Args:
+            locator: Tuple of (By strategy, value)
+            timeout: Custom timeout
+        """
+        timeout = timeout or self.default_timeout
+        element = WebDriverWait(self.driver, timeout).until(
+            EC.element_to_be_clickable(locator)
+        )
+        element.click()
+
+    def send_keys(self, locator: Tuple[str, str], text: str, clear_first: bool = True, timeout: Optional[int] = None) -> None:
+        """
+        Send keys to element.
+
+        Args:
+            locator: Tuple of (By strategy, value)
+            text: Text to enter
+            clear_first: Clear field before entering
+            timeout: Custom timeout
+        """
+        element = self.find_element(locator, timeout)
+        if clear_first:
+            element.clear()
+        element.send_keys(text)
+
+    def get_text(self, locator: Tuple[str, str], timeout: Optional[int] = None) -> str:
+        """
+        Get element text.
+
+        Args:
+            locator: Tuple of (By strategy, value)
+            timeout: Custom timeout
+
+        Returns:
+            Element text
+        """
+        element = self.find_element(locator, timeout)
+        return element.text
+
+    # ===== Gestures =====
+
+    def swipe(self, direction: str = 'up', distance: int = 300) -> None:
+        """
+        Swipe screen.
+
+        Args:
+            direction: Direction ('up', 'down', 'left', 'right')
+            distance: Swipe distance
+        """
+        size = self.driver.get_window_size()
+        start_x = size['width'] // 2
+        start_y = size['height'] // 2
+
+        direction_map = {
+            'up': (start_x, start_y - distance),
+            'down': (start_x, start_y + distance),
+            'left': (start_x - distance, start_y),
+            'right': (start_x + distance, start_y)
+        }
+
+        end_x, end_y = direction_map.get(direction, (start_x, start_y))
+        self.driver.swipe(start_x, start_y, end_x, end_y)
+
+    # ===== App State =====
+
+    def hide_keyboard(self) -> None:
+        """Hide keyboard if visible (platform-agnostic)."""
+        try:
+            self.driver.hide_keyboard()
+        except:
+            pass  # Keyboard not present
+
+    def is_keyboard_shown(self) -> bool:
+        """
+        Check if keyboard is shown.
+
+        Returns:
+            True if keyboard visible
+        """
+        return self.driver.is_keyboard_shown()

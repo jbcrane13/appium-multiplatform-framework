@@ -1,0 +1,72 @@
+"""Diagnostic test to help debug element finding issues."""
+
+import pytest
+from utils.debug_helpers import save_page_source, print_all_elements, find_tab_bar_info
+
+
+@pytest.mark.ios
+class TestDiagnostic:
+    """Diagnostic tests to understand the app structure."""
+
+    def test_dump_page_source(self, driver):
+        """
+        Dump the page source to a file for inspection.
+
+        This test will save the XML structure of the page to the debug/ folder.
+        """
+        import time
+        time.sleep(2)  # Wait for app to fully load
+
+        # Save page source
+        filename = save_page_source(driver, "app_launch")
+        print(f"\n✓ Page source saved to: {filename}")
+        print("  Open this file to see all available elements and their attributes")
+
+    def test_find_tab_bar_elements(self, driver):
+        """
+        Find and print all tab bar related elements.
+
+        This will show you exactly what tabs are available and their attributes.
+        """
+        import time
+        time.sleep(2)  # Wait for app to fully load
+
+        # Find tab bar info
+        find_tab_bar_info(driver)
+
+        print("\n✓ Check the output above to see tab bar structure")
+
+    def test_print_all_buttons(self, driver):
+        """
+        Print all buttons found on the screen.
+
+        This helps identify what buttons are available for interaction.
+        """
+        import time
+        time.sleep(2)  # Wait for app to fully load
+
+        # Print all buttons
+        print_all_elements(driver, 'XCUIElementTypeButton')
+
+        print("\n✓ Check the output above to see all buttons")
+
+    def test_try_navigation_strategies(self, driver):
+        """
+        Try different strategies to navigate to the first tab.
+
+        This will show which strategy works for your app.
+        """
+        import time
+        from pages.base_page import BasePage
+
+        time.sleep(2)  # Wait for app to fully load
+
+        page = BasePage(driver)
+
+        # Get the first tab name from tab bar
+        find_tab_bar_info(driver)
+
+        # TODO: Update with your app's first tab name
+        # Example: page.tap_tab_by_label("Dashboard")
+
+        print("\n✓ Update this test with your actual tab names")

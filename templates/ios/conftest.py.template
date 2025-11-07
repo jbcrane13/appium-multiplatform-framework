@@ -6,12 +6,15 @@ from pathlib import Path
 from datetime import datetime
 from appium import webdriver
 from appium.options.ios import XCUITestOptions
+from selenium.webdriver.common.by import By
+import time
 
 
 @pytest.fixture(scope='session')
 def config():
     """Load configuration from JSON files."""
-    config_dir = Path(__file__).parent.parent / 'config'
+    # Navigate from tests/ios/ to project root, then to config/
+    config_dir = Path(__file__).parent.parent.parent / 'config'
 
     with open(config_dir / 'common.json', 'r') as f:
         common_config = json.load(f)
@@ -53,13 +56,17 @@ def driver(request, config):
         # Set implicit wait
         driver.implicitly_wait(config.get('implicit_wait', 10))
 
+        # Dismiss any modals that may be open on app launch
+        dismiss_any_modals(driver)
+
         yield driver
 
     finally:
         if driver:
             # Capture screenshot on failure
             if request.node.rep_call.failed:
-                screenshot_dir = Path(__file__).parent.parent / 'screenshots' / 'ios'
+                # Navigate from tests/ios/ to project root, then to screenshots/
+                screenshot_dir = Path(__file__).parent.parent.parent / 'screenshots' / 'ios'
                 screenshot_dir.mkdir(parents=True, exist_ok=True)
 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -69,6 +76,31 @@ def driver(request, config):
                 driver.save_screenshot(str(screenshot_path))
 
             driver.quit()
+
+
+def dismiss_any_modals(driver):
+    """
+    Dismiss any modals or sheets that may be covering the main screen.
+
+    This helper looks for common dismiss buttons like Done, Close, Cancel, etc.
+    and taps them if present.
+    """
+    dismiss_texts = ['Done', 'Close', 'Cancel', 'Back', 'Dismiss']
+
+    for text in dismiss_texts:
+        try:
+            # Try to find button by label/name
+            element = driver.find_element(
+                '-ios predicate string',
+                f'label == "{text}" OR name == "{text}"'
+            )
+            element.click()
+            time.sleep(0.5)  # Brief wait after dismissing
+            return True
+        except:
+            continue
+
+    return False
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)

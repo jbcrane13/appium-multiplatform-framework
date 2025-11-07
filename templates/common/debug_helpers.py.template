@@ -1,0 +1,118 @@
+"""Debug helper utilities for troubleshooting tests."""
+
+import os
+from pathlib import Path
+from datetime import datetime
+
+
+def save_page_source(driver, test_name: str = "debug"):
+    """
+    Save the current page source to a file for debugging.
+
+    Args:
+        driver: Appium WebDriver instance
+        test_name: Name for the output file
+    """
+    # Create debug directory
+    debug_dir = Path(__file__).parent.parent / 'debug'
+    debug_dir.mkdir(exist_ok=True)
+
+    # Get page source
+    page_source = driver.page_source
+
+    # Save to file with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = debug_dir / f"{test_name}_{timestamp}.xml"
+
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(page_source)
+
+    print(f"\n[DEBUG] Page source saved to: {filename}")
+    return str(filename)
+
+
+def print_all_elements(driver, element_type: str = None):
+    """
+    Print all elements of a specific type found on screen.
+
+    Args:
+        driver: Appium WebDriver instance
+        element_type: iOS element type (e.g., 'XCUIElementTypeButton', 'XCUIElementTypeTabBar')
+                      or Android class (e.g., 'android.widget.Button')
+    """
+    from selenium.webdriver.common.by import By
+
+    if element_type:
+        elements = driver.find_elements(By.CLASS_NAME, element_type)
+        print(f"\n[DEBUG] Found {len(elements)} elements of type {element_type}:")
+    else:
+        # Get all elements
+        elements = driver.find_elements(By.XPATH, '//*')
+        print(f"\n[DEBUG] Found {len(elements)} total elements:")
+
+    for i, elem in enumerate(elements[:20]):  # Limit to first 20
+        try:
+            name = elem.get_attribute('name')
+            label = elem.get_attribute('label')
+            value = elem.get_attribute('value')
+            accessible = elem.get_attribute('accessible')
+
+            print(f"  [{i}] Name: {name}, Label: {label}, Value: {value}, Accessible: {accessible}")
+        except:
+            pass
+
+
+def find_tab_bar_info(driver):
+    """
+    Find and print information about the tab bar.
+
+    Args:
+        driver: Appium WebDriver instance
+    """
+    from selenium.webdriver.common.by import By
+
+    platform = driver.capabilities.get('platformName', 'unknown').lower()
+
+    try:
+        if platform == 'ios':
+            # Find iOS tab bar
+            tab_bars = driver.find_elements(By.CLASS_NAME, 'XCUIElementTypeTabBar')
+            print(f"\n[DEBUG] Found {len(tab_bars)} tab bars")
+
+            for tab_bar in tab_bars:
+                # Find buttons in tab bar
+                buttons = tab_bar.find_elements(By.CLASS_NAME, 'XCUIElementTypeButton')
+                print(f"[DEBUG] Tab bar contains {len(buttons)} buttons:")
+
+                for i, button in enumerate(buttons):
+                    name = button.get_attribute('name')
+                    label = button.get_attribute('label')
+                    accessible = button.get_attribute('accessible')
+                    print(f"  Tab {i}: name='{name}', label='{label}', accessible={accessible}")
+
+        elif platform == 'android':
+            # Find Android bottom navigation or tab layout
+            # Try BottomNavigationView first
+            nav_views = driver.find_elements(
+                By.CLASS_NAME,
+                'android.support.design.widget.BottomNavigationView'
+            )
+            if not nav_views:
+                nav_views = driver.find_elements(
+                    By.CLASS_NAME,
+                    'com.google.android.material.bottomnavigation.BottomNavigationView'
+                )
+
+            print(f"\n[DEBUG] Found {len(nav_views)} bottom navigation views")
+
+            for nav_view in nav_views:
+                # Find items
+                items = nav_view.find_elements(By.CLASS_NAME, 'android.widget.FrameLayout')
+                print(f"[DEBUG] Navigation contains {len(items)} items:")
+
+                for i, item in enumerate(items):
+                    text = item.get_attribute('text') or item.get_attribute('content-desc')
+                    print(f"  Tab {i}: text='{text}'")
+
+    except Exception as e:
+        print(f"[DEBUG] Error finding tab bar: {e}")

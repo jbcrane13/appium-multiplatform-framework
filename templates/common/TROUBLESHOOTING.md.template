@@ -1,0 +1,148 @@
+# Troubleshooting Guide
+
+This guide helps you diagnose and fix common issues with the {{APP_NAME}} automation tests.
+
+## Quick Diagnostic Tools
+
+We've created diagnostic utilities to help you understand what's happening when tests fail.
+
+### Running Diagnostic Tests
+
+```bash
+# Make sure Appium is running
+appium
+
+# In another terminal, run the diagnostic test suite
+pytest tests/ios/test_diagnostic.py -v -s
+```
+
+**Important**: The `-s` flag shows print output, which is critical for seeing debug information.
+
+### Available Diagnostic Tests
+
+1. **test_dump_page_source** - Saves the complete XML structure to `debug/` folder
+   - Shows ALL elements with their attributes
+   - Use this to see what accessibility IDs, names, and labels actually exist
+
+2. **test_find_tab_bar_elements** - Prints tab bar structure to console
+   - Shows exactly how tabs are structured
+   - Displays all tab names and accessibility IDs
+
+3. **test_print_all_buttons** - Lists all buttons on screen
+   - Helpful for finding clickable elements
+   - Shows name, label, and accessibility attributes
+
+4. **test_try_navigation_strategies** - Tests navigation methods
+   - Verifies if tab navigation works
+   - Saves page source before/after navigation attempts
+
+## Common Issues
+
+### Issue 1: Elements Not Found
+
+**Symptoms:**
+- Tests fail with "element could not be located"
+- TimeoutException errors
+- NoSuchElementException errors
+
+**Solution:**
+
+1. Run the diagnostic tests to see what elements actually exist:
+   ```bash
+   pytest tests/ios/test_diagnostic.py::TestDiagnostic::test_dump_page_source -v -s
+   ```
+
+2. Check the generated XML file in the `debug/` folder:
+   ```bash
+   ls -la debug/
+   # Open the most recent file
+   ```
+
+3. Look for your element in the XML and note:
+   - Its `name` attribute
+   - Its `label` attribute
+   - Its `accessible` attribute
+   - Its element type
+
+4. Update your locator to match what's actually in the app
+
+### Issue 2: Tab Navigation Failing
+
+**Symptoms:**
+- Can't switch between tabs
+- Tab bar elements not found
+- Tests pass individually but fail in sequence
+
+**Solution:**
+
+Use the robust `tap_tab_by_label()` method:
+
+```python
+# ✅ Robust navigation with multiple fallback strategies
+page.tap_tab_by_label("Dashboard")
+```
+
+Run the tab bar diagnostic:
+```bash
+pytest tests/ios/test_diagnostic.py::TestDiagnostic::test_find_tab_bar_elements -v -s
+```
+
+### Issue 3: Modals Blocking Navigation
+
+**Symptoms:**
+- Elements covered by sheets/modals
+- "Done" or "Close" buttons visible in screenshots
+- Tab bar not accessible
+
+**Solution:**
+
+The framework automatically dismisses modals on app launch. If issues persist, check screenshots in `screenshots/ios/`.
+
+## Debugging Workflow
+
+When a test fails:
+
+1. **Check the screenshot** - `ls -lt screenshots/ios/ | head -5`
+2. **Dump page source** - `pytest tests/ios/test_diagnostic.py::TestDiagnostic::test_dump_page_source -v -s`
+3. **Examine the XML** - Open the generated `debug/*.xml` file
+4. **Check tab bar** - `pytest tests/ios/test_diagnostic.py::TestDiagnostic::test_find_tab_bar_elements -v -s`
+5. **Update your test** based on findings
+
+## Useful Commands
+
+### Save Page Source
+```python
+from utils.debug_helpers import save_page_source
+
+filename = save_page_source(driver, "my_test_step")
+```
+
+### Find All Elements
+```python
+from utils.debug_helpers import print_all_elements
+
+print_all_elements(driver, 'XCUIElementTypeButton')
+```
+
+### Debug Tab Bar
+```python
+from utils.debug_helpers import find_tab_bar_info
+
+find_tab_bar_info(driver)
+```
+
+## Best Practices
+
+1. **Always use robust finding methods** with multiple strategies
+2. **Run diagnostics first** before debugging complex issues
+3. **Check screenshots** to see what's actually on screen
+4. **Use explicit waits** instead of relying on implicit waits
+5. **Navigate explicitly** at the start of each test
+
+## File Locations
+
+- **Diagnostic Tests**: `tests/ios/test_diagnostic.py`
+- **Debug Utilities**: `utils/debug_helpers.py`
+- **Screenshots**: `screenshots/ios/`
+- **Debug Output**: `debug/`
+- **Logs**: `logs/pytest.log`

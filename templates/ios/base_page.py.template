@@ -278,3 +278,125 @@ class BasePage:
             True if keyboard visible
         """
         return self.driver.is_keyboard_shown()
+
+    # ===== Tab Bar Navigation (iOS) =====
+
+    def tap_tab_by_label(self, tab_label: str, timeout: int = 10) -> None:
+        """
+        Tap a tab in the iOS tab bar by its label.
+
+        This method uses multiple strategies to find and tap the tab,
+        providing robust element finding with automatic fallbacks.
+
+        Args:
+            tab_label: The label text of the tab (e.g., 'Dashboard', 'Map')
+            timeout: Wait timeout
+
+        Example:
+            >>> page.tap_tab_by_label("Dashboard")
+        """
+        strategies = [
+            # Strategy 1: Direct accessibility ID
+            lambda: self.click(self.by_accessibility_id(f"{tab_label.lower()}_tab"), timeout=timeout),
+
+            # Strategy 2: Find in tab bar by label
+            lambda: self._find_in_tab_bar_by_label(tab_label, timeout),
+
+            # Strategy 3: Find button by name
+            lambda: self._find_button_by_name(tab_label, timeout),
+
+            # Strategy 4: Find by iOS predicate
+            lambda: self._find_by_predicate(tab_label, timeout),
+        ]
+
+        last_error = None
+        for strategy in strategies:
+            try:
+                strategy()
+                return  # Success
+            except Exception as e:
+                last_error = e
+                continue
+
+        # If all strategies failed, raise the last error
+        raise last_error if last_error else Exception(f"Could not find tab '{tab_label}'")
+
+    def _find_in_tab_bar_by_label(self, tab_label: str, timeout: int) -> None:
+        """Find and tap a button in the tab bar by label."""
+        # First find the tab bar
+        tab_bar = WebDriverWait(self.driver, timeout).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'XCUIElementTypeTabBar'))
+        )
+
+        # Then find the button with matching label
+        buttons = tab_bar.find_elements(By.CLASS_NAME, 'XCUIElementTypeButton')
+        for button in buttons:
+            label = button.get_attribute('label') or button.get_attribute('name')
+            if label and tab_label.lower() in label.lower():
+                button.click()
+                return
+
+        raise Exception(f"Tab '{tab_label}' not found in tab bar")
+
+    def _find_button_by_name(self, tab_label: str, timeout: int) -> None:
+        """Find button by name attribute."""
+        buttons = WebDriverWait(self.driver, timeout).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, 'XCUIElementTypeButton'))
+        )
+
+        for button in buttons:
+            name = button.get_attribute('name')
+            if name and tab_label.lower() in name.lower():
+                button.click()
+                return
+
+        raise Exception(f"Button with name '{tab_label}' not found")
+
+    def _find_by_predicate(self, tab_label: str, timeout: int) -> None:
+        """Find element using iOS predicate string."""
+        if self.platform != 'ios':
+            raise ValueError("Predicates only work on iOS")
+
+        element = WebDriverWait(self.driver, timeout).until(
+            EC.element_to_be_clickable((
+                '-ios predicate string',
+                f'label CONTAINS[c] "{tab_label}" OR name CONTAINS[c] "{tab_label}"'
+            ))
+        )
+        element.click()
+
+    # ===== Modal/Sheet Handling =====
+
+    def dismiss_modal_if_present(self) -> bool:
+        """
+        Dismiss any open modal or sheet by tapping Done, Close, Cancel, or Back button.
+
+        Returns:
+            True if a modal was dismissed, False otherwise
+
+        Example:
+            >>> page.dismiss_modal_if_present()
+        """
+        # Common dismiss button texts
+        dismiss_texts = ['Done', 'Close', 'Cancel', 'Back']
+
+        for text in dismiss_texts:
+            try:
+                # Try to find and tap dismiss button
+                element = self.driver.find_element(By.ACCESSIBILITY_ID, text.lower())
+                element.click()
+                return True
+            except:
+                try:
+                    # Try by text if accessibility ID doesn't work
+                    if self.platform == 'ios':
+                        element = self.driver.find_element(
+                            '-ios predicate string',
+                            f'label == "{text}" OR name == "{text}"'
+                        )
+                        element.click()
+                        return True
+                except:
+                    continue
+
+        return False

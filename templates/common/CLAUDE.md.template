@@ -1,0 +1,153 @@
+# Claude AI Development Guidelines
+
+This document provides guidelines for AI assistants (like Claude) when working on this test automation project.
+
+## Core Principles
+
+1. **Robust Element Finding** - Always use multiple strategies to locate elements
+2. **Defensive Coding** - Assume elements might not be where expected
+3. **Clear Diagnostics** - Provide debugging tools when things fail
+4. **Explicit Over Implicit** - Be explicit about navigation and state
+
+## Element Finding Best Practices
+
+### ✅ DO: Use Robust Finding Strategies
+
+When creating new page object methods or tests, **always** use robust element finding strategies that try multiple approaches:
+
+```python
+def tap_tab_by_label(self, tab_label: str, timeout: int = 10) -> None:
+    """Try multiple strategies to find and tap an element."""
+    strategies = [
+        lambda: self.click(self.by_accessibility_id(f"{tab_label.lower()}_tab"), timeout=timeout),
+        lambda: self._find_in_tab_bar_by_label(tab_label, timeout),
+        lambda: self._find_button_by_name(tab_label, timeout),
+        lambda: self._find_by_predicate(tab_label, timeout),
+    ]
+
+    for strategy in strategies:
+        try:
+            strategy()
+            return  # Success!
+        except:
+            continue
+
+    raise Exception(f"Could not find element '{tab_label}'")
+```
+
+### ❌ DON'T: Use Single-Strategy Finding
+
+```python
+# ❌ BAD
+def navigate_to_dashboard(self):
+    self.click(self.by_accessibility_id("dashboard_tab"))
+
+# ✅ GOOD
+def navigate_to_dashboard(self):
+    self.tap_tab_by_label("Dashboard")
+```
+
+## Platform-Specific Strategies
+
+### iOS Element Finding Order
+
+1. **Accessibility ID** - `By.ACCESSIBILITY_ID`
+2. **iOS Predicate** - Case-insensitive label/name search
+3. **Class Chain** - Navigate element hierarchy
+4. **XPath** - Last resort (slowest)
+
+### Android Element Finding Order
+
+1. **Accessibility ID** (content-desc)
+2. **Resource ID**
+3. **UIAutomator Selector**
+4. **XPath** (last resort)
+
+## Creating New Page Objects
+
+```python
+class MyPage(BasePage):
+    def tap_my_button(self) -> None:
+        """Tap button using multiple strategies."""
+        strategies = [
+            lambda: self.click(self.button_locator, timeout=5),
+            lambda: self._find_button_by_label("My Button"),
+        ]
+
+        for strategy in strategies:
+            try:
+                strategy()
+                return
+            except:
+                continue
+
+        raise Exception("Could not tap my button")
+```
+
+## Writing Tests
+
+```python
+@pytest.mark.ios
+def test_feature(self, driver):
+    """
+    GIVEN the app is in a known state
+    WHEN I perform an action
+    THEN I expect a specific outcome
+    """
+    page = MyPage(driver)
+    page.navigate_to_my_page()
+    time.sleep(0.5)  # Let UI settle
+
+    page.tap_my_button()
+
+    assert page.is_result_displayed()
+```
+
+## Error Handling
+
+```python
+# ✅ GOOD - Specific, actionable error
+assert element.is_displayed(), (
+    f"Element '{element_name}' not visible. "
+    f"Check screenshot at screenshots/ios/"
+)
+```
+
+## Waits and Timing
+
+### Use Explicit Waits
+
+```python
+# ✅ GOOD
+WebDriverWait(driver, timeout).until(
+    EC.visibility_of_element_located(locator)
+)
+
+# ❌ AVOID - Only when necessary
+time.sleep(5)
+```
+
+## Testing Changes
+
+Before committing:
+
+1. Run diagnostic tests: `pytest tests/ios/test_diagnostic.py -v -s`
+2. Run full test suite
+3. Check for screenshots
+4. Review debug output
+
+## Checklist for New Code
+
+- [ ] Uses robust element finding with multiple strategies
+- [ ] Has clear, descriptive method names
+- [ ] Includes docstrings
+- [ ] Handles exceptions gracefully
+- [ ] Provides helpful error messages
+- [ ] Uses explicit waits
+
+## References
+
+- **Troubleshooting**: `TROUBLESHOOTING.md`
+- **Base Page**: `pages/base_page.py`
+- **Debug Utils**: `utils/debug_helpers.py`
+- **Diagnostic Tests**: `tests/ios/test_diagnostic.py`

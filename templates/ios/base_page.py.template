@@ -372,8 +372,9 @@ class BasePage:
         """
         Tap a tab in the iOS tab bar by its label.
 
-        This method uses optimized RobustElementFinder with fast primary search
-        and smart fallback strategies.
+        SwiftUI TabView Note: Tab bar buttons use the accessibility label as their
+        'name' attribute. Accessibility identifiers set on content views do NOT
+        propagate to tab bar buttons. Therefore, we search by name directly.
 
         Args:
             tab_label: The label text of the tab (e.g., 'Dashboard', 'Map')
@@ -382,22 +383,28 @@ class BasePage:
         Example:
             >>> page.tap_tab_by_label("Dashboard")
         """
-        # PRIMARY: Try direct accessibility ID (fast: ~350ms)
-        accessibility_id = f"{tab_label.lower()}_tab"
-
-        # FALLBACKS: Only if primary fails (slower but comprehensive)
-        fallbacks = [
-            # iOS predicate as fallback
-            f'label CONTAINS[c] "{tab_label}" OR name CONTAINS[c] "{tab_label}"',
-        ]
-
+        # PRIMARY: Use name attribute (what SwiftUI TabView actually exposes)
+        # SwiftUI tab buttons expose label as 'name' attribute, not accessibility-id
         try:
-            element = self.find_by_accessibility_id(accessibility_id, fallbacks, timeout=3)
+            # Try by name attribute (fast: ~350ms)
+            element = WebDriverWait(self.driver, 3).until(
+                EC.element_to_be_clickable((By.NAME, tab_label))
+            )
             element.click()
             return
         except:
-            # If RobustElementFinder fails, try legacy strategies
-            self._find_tab_legacy(tab_label, timeout)
+            # FALLBACK: Use predicate string as last resort
+            try:
+                element = WebDriverWait(self.driver, 3).until(
+                    EC.element_to_be_clickable((
+                        '-ios predicate string',
+                        f'name == "{tab_label}" OR label == "{tab_label}"'
+                    ))
+                )
+                element.click()
+                return
+            except:
+                raise Exception(f"Could not find tab '{tab_label}'")
 
     def _find_tab_legacy(self, tab_label: str, timeout: int) -> None:
         """Legacy fallback for tab finding (kept for compatibility)."""

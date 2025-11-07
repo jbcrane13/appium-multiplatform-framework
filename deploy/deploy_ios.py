@@ -382,6 +382,13 @@ class iOSDeployment:
             replacements
         )
 
+        # Performance utilities
+        self.utils.copy_template(
+            'wait_helper.py.template',
+            automation_project_path / 'utils' / 'wait_helper.py',
+            replacements
+        )
+
         # Documentation templates
         self.utils.copy_template(
             'TROUBLESHOOTING.md.template',
@@ -392,6 +399,12 @@ class iOSDeployment:
         self.utils.copy_template(
             'CLAUDE.md.template',
             automation_project_path / 'CLAUDE.md',
+            replacements
+        )
+
+        self.utils.copy_template(
+            'README_PERFORMANCE.md.template',
+            automation_project_path / 'README_PERFORMANCE.md',
             replacements
         )
 

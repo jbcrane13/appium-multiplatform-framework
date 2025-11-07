@@ -11,5 +11,8 @@
   "appium:useNewWDA": false,
   "appium:clearSystemFiles": false,
   "appium:noReset": false,
-  "appium:fullReset": false
+  "appium:fullReset": false,
+  "appium:reduceMotion": true,
+  "appium:shouldUseCompactResponses": true,
+  "appium:waitForIdleTimeout": 0
 }

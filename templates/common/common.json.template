@@ -6,5 +6,18 @@
   "command_timeout": 60,
   "screenshot_on_failure": true,
   "log_level": "INFO",
-  "capabilities": {}
+  "capabilities": {},
+  "wait_times": {
+    "after_navigation": 0.2,
+    "after_modal_dismiss": 0.1,
+    "after_gesture": 0.1,
+    "app_launch": 0.5
+  },
+  "fast_mode": {
+    "enabled": false,
+    "after_navigation": 0.1,
+    "after_modal_dismiss": 0.05,
+    "after_gesture": 0.05,
+    "app_launch": 0.2
+  }
 }

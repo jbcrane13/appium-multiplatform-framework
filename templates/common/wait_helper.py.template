@@ -1,0 +1,100 @@
+"""Wait time helper for configurable test execution speed."""
+
+import os
+import time
+import json
+from pathlib import Path
+from typing import Optional
+
+
+class WaitHelper:
+    """Centralized wait time management with configurable speeds."""
+
+    _instance = None
+    _config = None
+
+    def __new__(cls):
+        """Singleton pattern to ensure one config instance."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._load_config()
+        return cls._instance
+
+    def _load_config(self) -> None:
+        """Load wait time configuration from common.json."""
+        try:
+            config_path = Path(__file__).parent.parent / 'config' / 'common.json'
+            with open(config_path, 'r') as f:
+                full_config = json.load(f)
+
+            # Check if fast mode is enabled via environment variable or config
+            fast_mode_env = os.getenv('FAST_MODE', '').lower() in ('true', '1', 'yes')
+            fast_mode_config = full_config.get('fast_mode', {}).get('enabled', False)
+
+            if fast_mode_env or fast_mode_config:
+                self._config = full_config.get('fast_mode', {})
+            else:
+                self._config = full_config.get('wait_times', {})
+
+        except Exception:
+            # Fallback to default values if config can't be loaded
+            self._config = {
+                'after_navigation': 0.2,
+                'after_modal_dismiss': 0.1,
+                'after_gesture': 0.1,
+                'app_launch': 0.5
+            }
+
+    def wait(self, wait_type: str, custom_time: Optional[float] = None) -> None:
+        """
+        Perform a configurable wait.
+
+        Args:
+            wait_type: Type of wait ('after_navigation', 'after_modal_dismiss',
+                      'after_gesture', 'app_launch')
+            custom_time: Optional custom wait time in seconds (overrides config)
+        """
+        if custom_time is not None:
+            time.sleep(custom_time)
+        else:
+            wait_time = self._config.get(wait_type, 0.1)
+            time.sleep(wait_time)
+
+    def get_wait_time(self, wait_type: str) -> float:
+        """
+        Get configured wait time without actually waiting.
+
+        Args:
+            wait_type: Type of wait
+
+        Returns:
+            Wait time in seconds
+        """
+        return self._config.get(wait_type, 0.1)
+
+    def is_fast_mode(self) -> bool:
+        """
+        Check if fast mode is enabled.
+
+        Returns:
+            True if fast mode is active
+        """
+        fast_mode_env = os.getenv('FAST_MODE', '').lower() in ('true', '1', 'yes')
+        return fast_mode_env or self._config.get('enabled', False)
+
+
+# Convenience function for quick access
+def wait(wait_type: str, custom_time: Optional[float] = None) -> None:
+    """
+    Convenience function for configurable waits.
+
+    Args:
+        wait_type: Type of wait ('after_navigation', 'after_modal_dismiss', etc.)
+        custom_time: Optional custom wait time in seconds
+
+    Example:
+        >>> from utils.wait_helper import wait
+        >>> wait('after_navigation')
+        >>> wait('after_modal_dismiss', 0.05)  # Custom time
+    """
+    WaitHelper().wait(wait_type, custom_time)

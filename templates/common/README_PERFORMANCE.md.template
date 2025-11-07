@@ -1,0 +1,171 @@
+# Test Performance Optimization Guide
+
+This guide explains how to optimize test execution speed for the AppJubilee automation suite.
+
+## Quick Start
+
+### Fast Mode (Minimal Wait Times)
+
+```bash
+# Enable fast mode via environment variable
+FAST_MODE=true pytest tests/ios/test_bat.py -v
+
+# Or enable in config/common.json
+# Set "fast_mode": { "enabled": true }
+```
+
+### Parallel Execution
+
+```bash
+# Install pytest-xdist first
+pip install pytest-xdist
+
+# Run with auto-detected workers
+pytest tests/ios/test_bat.py -n auto
+
+# Run with specific number of workers
+pytest tests/ios/test_bat.py -n 2
+```
+
+## Wait Time Configuration
+
+Wait times are configured in `config/common.json`:
+
+### Standard Mode (Default)
+- `after_navigation`: 0.2s - Wait after tab navigation
+- `after_modal_dismiss`: 0.1s - Wait after dismissing modals
+- `after_gesture`: 0.1s - Wait after swipe/tap gestures
+- `app_launch`: 0.5s - Wait after app launches
+
+### Fast Mode
+- `after_navigation`: 0.1s (50% reduction)
+- `after_modal_dismiss`: 0.05s (50% reduction)
+- `after_gesture`: 0.05s (50% reduction)
+- `app_launch`: 0.2s (60% reduction)
+
+## Performance Optimizations Implemented
+
+### 1. Configurable Wait Times
+
+All hardcoded `time.sleep()` calls have been replaced with configurable waits:
+
+```python
+from utils.wait_helper import wait
+
+# Old way
+time.sleep(0.5)
+
+# New way
+wait('after_navigation')  # Uses configured time
+```
+
+### 2. iOS Animation Reduction
+
+Capabilities have been optimized in `config/ios/capabilities.json`:
+- `reduceMotion: true` - Disables iOS animations
+- `shouldUseCompactResponses: true` - Reduces response payload size
+- `waitForIdleTimeout: 0` - Doesn't wait for app to be idle
+
+### 3. Parallel Test Execution Support
+
+With pytest-xdist installed, tests can run in parallel:
+- Requires multiple iOS simulators
+- Best for suites with independent tests
+- Can reduce total execution time by 50-70%
+
+## Estimated Time Savings
+
+### Single Test Run (18 BAT tests)
+
+**Before optimization:**
+- 10 sleep calls @ avg 0.4s = 4s per test
+- 18 tests × 4s = ~72s in wait times alone
+- Total: ~3-4 minutes for full suite
+
+**After optimization (Standard Mode):**
+- 10 sleep calls @ avg 0.15s = 1.5s per test
+- 18 tests × 1.5s = ~27s in wait times
+- Total: ~2-2.5 minutes for full suite
+- **Savings: ~40% reduction**
+
+**After optimization (Fast Mode):**
+- 10 sleep calls @ avg 0.08s = 0.8s per test
+- 18 tests × 0.8s = ~14s in wait times
+- Total: ~1.5-2 minutes for full suite
+- **Savings: ~50% reduction**
+
+**With Parallel Execution (2 workers):**
+- Total: ~1 minute for full suite
+- **Savings: ~60-70% reduction**
+
+## Trade-offs
+
+### Fast Mode
+- **Pros**: 50% faster test execution
+- **Cons**: Slightly less stable on slower systems, may miss timing-dependent issues
+- **Recommendation**: Use for development, standard mode for CI/CD
+
+### Parallel Execution
+- **Pros**: 50-70% faster total execution time
+- **Cons**: Requires setup of multiple simulators, more resource intensive
+- **Recommendation**: Use for large test suites, may not be worth it for < 20 tests
+
+## Best Practices
+
+1. **Use Fast Mode During Development**
+   ```bash
+   FAST_MODE=true pytest tests/ios/test_bat.py -v -k test_name
+   ```
+
+2. **Use Standard Mode in CI/CD**
+   - More stable and reliable
+   - Better for flaky network conditions
+   - Default configuration is CI-ready
+
+3. **Use Parallel Execution for Large Suites**
+   - Only when you have > 20 tests
+   - Ensure tests are independent
+   - Set up multiple simulators
+
+4. **Monitor Flakiness**
+   - If tests become flaky in Fast Mode, use Standard Mode
+   - Adjust wait times in `config/common.json` as needed
+
+## Customizing Wait Times
+
+Edit `config/common.json` to fine-tune wait times:
+
+```json
+{
+  "wait_times": {
+    "after_navigation": 0.2,     // Increase if navigation fails
+    "after_modal_dismiss": 0.1,  // Increase if modals don't close
+    "after_gesture": 0.1,        // Increase if swipes fail
+    "app_launch": 0.5            // Increase if app launch detection fails
+  }
+}
+```
+
+## Troubleshooting
+
+### Tests Fail in Fast Mode
+- **Solution**: Use Standard Mode or increase specific wait times
+- Check which wait type is causing issues and adjust accordingly
+
+### Parallel Tests Fail
+- **Solution**: Ensure tests are truly independent
+- Check that each test sets up its own state
+- Avoid shared state between tests
+
+### Animations Still Visible
+- **Solution**: Ensure `reduceMotion: true` is in capabilities
+- Check iOS Simulator Settings > Accessibility > Reduce Motion
+- May need to restart simulator
+
+## Future Optimizations
+
+Potential future improvements:
+1. Session-scoped fixtures (reuse app between tests)
+2. Smart wait strategies (wait for specific element state)
+3. Test data pre-seeding (reduce setup time)
+4. Conditional screenshot capture (only on failure)

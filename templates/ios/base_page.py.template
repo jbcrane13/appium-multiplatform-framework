@@ -400,3 +400,61 @@ class BasePage:
                     continue
 
         return False
+
+    def dismiss_sheet_by_swipe(self) -> bool:
+        """
+        Dismiss an iOS sheet by swiping down.
+
+        This is the standard iOS gesture for dismissing sheets that don't have
+        explicit dismiss buttons.
+
+        Returns:
+            True if swipe was performed, False otherwise
+
+        Example:
+            >>> page.dismiss_sheet_by_swipe()
+        """
+        try:
+            if self.platform != 'ios':
+                return False
+
+            # Get screen dimensions
+            size = self.driver.get_window_size()
+
+            # Swipe down from top-center of screen
+            # This mimics the iOS gesture to dismiss sheets
+            start_x = size['width'] // 2
+            start_y = int(size['height'] * 0.3)  # Start from upper portion of screen
+            end_x = start_x
+            end_y = int(size['height'] * 0.8)  # Swipe down to lower portion
+
+            self.driver.swipe(start_x, start_y, end_x, end_y, 500)
+            return True
+        except Exception:
+            return False
+
+    def tap_outside_sheet(self) -> bool:
+        """
+        Tap on the dimmed background area to dismiss a sheet.
+
+        Returns:
+            True if tap was performed, False otherwise
+
+        Example:
+            >>> page.tap_outside_sheet()
+        """
+        try:
+            if self.platform != 'ios':
+                return False
+
+            # Get screen dimensions
+            size = self.driver.get_window_size()
+
+            # Tap near top of screen (where dimmed background usually is)
+            tap_x = size['width'] // 2
+            tap_y = int(size['height'] * 0.15)  # Top 15% of screen
+
+            self.driver.tap([(tap_x, tap_y)])
+            return True
+        except Exception:
+            return False

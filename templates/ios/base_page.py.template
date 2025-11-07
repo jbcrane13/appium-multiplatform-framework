@@ -467,8 +467,9 @@ class BasePage:
         """
         Dismiss any open modal or sheet by tapping Done, Close, Cancel, or Back button.
 
-        Uses optimized RobustElementFinder with fast checks (1 sec timeout) and
-        smart fallbacks only when needed.
+        Uses optimized fast checks with 1-second timeout per button. If no accessibility
+        IDs are found, returns False immediately (fail fast). This prevents spending
+        40+ seconds searching for non-existent buttons.
 
         Returns:
             True if a modal was dismissed, False otherwise
@@ -477,12 +478,10 @@ class BasePage:
             >>> page.dismiss_modal_if_present()
         """
         # Common dismiss button texts (in order of likelihood)
-        dismiss_texts = ['Done', 'Close', 'Cancel', 'Back']
+        dismiss_texts = ['done', 'close', 'cancel', 'back']
 
-        for text in dismiss_texts:
-            accessibility_id = text.lower()
-
-            # FAST CHECK: Use is_accessible_element_present with 1 sec timeout
+        for accessibility_id in dismiss_texts:
+            # FAST CHECK: 1 second timeout per button
             if self.is_accessible_element_present(accessibility_id, timeout=1):
                 try:
                     element = self.find_by_accessibility_id(accessibility_id, timeout=1)
@@ -491,23 +490,8 @@ class BasePage:
                 except:
                     continue
 
-        # FALLBACK: If no accessibility ID found, try predicate strings
-        # Only use this if absolutely necessary (10x slower)
-        if self.platform == 'ios':
-            for text in dismiss_texts:
-                try:
-                    fallback_locator = (
-                        '-ios predicate string',
-                        f'label == "{text}" OR name == "{text}"'
-                    )
-                    element = WebDriverWait(self.driver, 2).until(
-                        EC.presence_of_element_located(fallback_locator)
-                    )
-                    element.click()
-                    return True
-                except:
-                    continue
-
+        # No modal found - return False immediately (fail fast)
+        # Do NOT use slow predicate string searches
         return False
 
     def dismiss_sheet_by_swipe(self) -> bool:
